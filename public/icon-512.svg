@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <rect width="200" height="200" rx="44" fill="#111827"/>
+  <!-- Left leg -->
+  <line x1="100" y1="30" x2="18" y2="178" stroke="white" stroke-width="16" stroke-linecap="round"/>
+  <!-- Right leg -->
+  <line x1="100" y1="30" x2="182" y2="178" stroke="white" stroke-width="16" stroke-linecap="round"/>
+  <!-- Crossbar -->
+  <line x1="55" y1="110" x2="145" y2="110" stroke="white" stroke-width="16" stroke-linecap="round"/>
+  <!-- Spark node at peak — the AI insight -->
+  <circle cx="100" cy="30" r="11" fill="white"/>
+</svg>
