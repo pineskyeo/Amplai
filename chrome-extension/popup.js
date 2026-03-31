@@ -1,4 +1,5 @@
-const NOTION_API_KEY = 'NOTION_KEY_REDACTED';
+// Config loaded from config.js (not committed to git)
+const NOTION_API_KEY = typeof CONFIG !== 'undefined' ? CONFIG.NOTION_API_KEY : '';
 const NOTION_API = 'https://api.notion.com/v1';
 const NOTION_VERSION = '2022-06-28';
 
