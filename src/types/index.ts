@@ -1,3 +1,20 @@
+// --- Chat types ---
+
+export type TopicCategory =
+  | 'requirement'
+  | 'approach'
+  | 'study-topic'
+  | 'decision'
+
+export interface ConversationTopicModel {
+  id: string
+  title: string
+  summary: string
+  category: TopicCategory
+}
+
+// --- Benchmark types ---
+
 export type AIModel = 'claude' | 'gemini' | 'codex'
 
 export type StepStatus = 'idle' | 'loading' | 'done' | 'error'

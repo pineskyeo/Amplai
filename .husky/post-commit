@@ -1,0 +1,3 @@
+#!/bin/sh
+# Auto-log commit to Notion (non-blocking, don't fail the commit)
+pnpm notion:commit &

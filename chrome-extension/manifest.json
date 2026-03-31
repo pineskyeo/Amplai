@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Amplai → Velog Publisher",
+  "version": "1.0.0",
+  "description": "Notion 학습노트를 Velog에 바로 발행",
+  "permissions": ["activeTab", "clipboardWrite", "storage"],
+  "host_permissions": ["https://api.notion.com/*"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icon.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://velog.io/write*"],
+      "js": ["content.js"]
+    }
+  ]
+}

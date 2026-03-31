@@ -8,12 +8,16 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "prepare": "husky"
+    "prepare": "husky",
+    "notion:commit": "tsx scripts/log-commit.ts",
+    "notion:log": "tsx scripts/log-session.ts",
+    "notion:cleanup": "tsx scripts/notion-cleanup.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.64",
     "@ai-sdk/google": "^3.0.53",
     "@ai-sdk/openai": "^3.0.48",
+    "@ai-sdk/react": "^3.0.143",
     "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-tabs": "^1.1.13",
     "@supabase/supabase-js": "^2.100.1",
@@ -37,6 +41,7 @@
     "@types/react-dom": "^19",
     "@typescript-eslint/eslint-plugin": "^8.57.2",
     "@typescript-eslint/parser": "^8.57.2",
+    "dotenv": "^17.3.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
     "eslint-config-prettier": "^10.1.8",
@@ -45,6 +50,7 @@
     "lint-staged": "^16.4.0",
     "prettier": "^3.8.1",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   },
   "lint-staged": {

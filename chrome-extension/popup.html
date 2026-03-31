@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 360px;
+      padding: 16px;
+      font-family: -apple-system, sans-serif;
+      font-size: 13px;
+      color: #333;
+    }
+    h2 {
+      font-size: 15px;
+      margin: 0 0 12px;
+    }
+    label {
+      display: block;
+      margin-bottom: 4px;
+      font-weight: 600;
+      font-size: 12px;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 12px;
+      box-sizing: border-box;
+      margin-bottom: 8px;
+    }
+    .btn {
+      width: 100%;
+      padding: 10px;
+      margin-top: 8px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-primary {
+      background: #1a1a1a;
+      color: white;
+    }
+    .btn-primary:hover { background: #333; }
+    .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
+    .btn-secondary {
+      background: #f0f0f0;
+      color: #333;
+    }
+    .btn-secondary:hover { background: #e0e0e0; }
+    .status {
+      margin-top: 8px;
+      padding: 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      display: none;
+    }
+    .status.success { display: block; background: #e8f5e9; color: #2e7d32; }
+    .status.error { display: block; background: #fce4ec; color: #c62828; }
+    .status.loading { display: block; background: #e3f2fd; color: #1565c0; }
+    .preview {
+      margin-top: 8px;
+      padding: 8px;
+      border: 1px solid #eee;
+      border-radius: 6px;
+      font-size: 11px;
+      max-height: 150px;
+      overflow-y: auto;
+      background: #fafafa;
+      white-space: pre-wrap;
+      display: none;
+    }
+    .info {
+      margin-top: 8px;
+      font-size: 11px;
+      color: #999;
+    }
+    .step {
+      padding: 4px 0;
+      font-size: 12px;
+      color: #666;
+    }
+    .step.active { color: #1a1a1a; font-weight: 600; }
+    .step.done { color: #2e7d32; }
+  </style>
+</head>
+<body>
+  <h2>Amplai → Velog</h2>
+
+  <!-- Step 1: Notion URL -->
+  <div id="step1">
+    <label>Notion 페이지 URL 또는 ID</label>
+    <input type="text" id="notionUrl" placeholder="https://notion.so/... 또는 페이지 ID">
+    <button class="btn btn-primary" id="fetchBtn">Notion에서 가져오기</button>
+  </div>
+
+  <!-- Step 2: Preview & Edit -->
+  <div id="step2" style="display:none">
+    <label>제목</label>
+    <input type="text" id="title">
+
+    <label>태그 (쉼표 구분)</label>
+    <input type="text" id="tags">
+
+    <label>미리보기</label>
+    <div class="preview" id="preview"></div>
+
+    <button class="btn btn-primary" id="publishBtn">Velog에 발행</button>
+    <button class="btn btn-secondary" id="copyBtn">클립보드에 복사만</button>
+    <button class="btn btn-secondary" id="backBtn">← 다시 선택</button>
+  </div>
+
+  <div class="status" id="status"></div>
+  <p class="info">Notion 페이지를 가져와서 Velog 글쓰기에 자동 입력합니다.</p>
+
+  <script src="popup.js"></script>
+</body>
+</html>
