@@ -10,6 +10,7 @@ import { useChatPagePresenter } from '../chat-page-presenter'
 import MessageBubble from './message-bubble'
 import ChatInput from './chat-input'
 import ConversationSidebar from './conversation-sidebar'
+import TokenStatsBar from './token-stats-bar'
 
 export default function ChatPage() {
   const {
@@ -121,6 +122,9 @@ export default function ChatPage() {
               </div>
             )}
           </div>
+
+          {/* Token stats */}
+          <TokenStatsBar />
 
           {/* Input */}
           <div className="mx-auto w-full max-w-2xl">

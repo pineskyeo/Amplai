@@ -1,6 +1,7 @@
 import { streamText, convertToModelMessages, type UIMessage } from 'ai'
 
 import { getChatModel } from '@/lib/ai-model'
+import { trackUsage, calculateCost } from '@/lib/token-tracker'
 
 const SYSTEM_PROMPT = `당신은 Amplai의 AI 엔지니어 컨설턴트입니다.
 
@@ -34,10 +35,28 @@ export async function POST(req: Request) {
     modelId?: string
   }
 
+  const resolvedModelId = modelId ?? process.env.AI_MODEL ?? 'gemini-flash'
+  const startTime = Date.now()
+
   const result = streamText({
-    model: getChatModel(modelId),
+    model: getChatModel(resolvedModelId),
     system: SYSTEM_PROMPT,
     messages: await convertToModelMessages(messages),
+    onFinish: ({ usage }) => {
+      const latencyMs = Date.now() - startTime
+      const inputTokens = usage?.inputTokens ?? 0
+      const outputTokens = usage?.outputTokens ?? 0
+
+      trackUsage({
+        inputTokens,
+        outputTokens,
+        model: resolvedModelId,
+        costUsd: calculateCost(resolvedModelId, inputTokens, outputTokens),
+        latencyMs,
+        timestamp: Date.now(),
+        cached: false,
+      })
+    },
   })
 
   return result.toUIMessageStreamResponse()
