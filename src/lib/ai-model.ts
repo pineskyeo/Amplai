@@ -24,7 +24,7 @@ export const MODEL_OPTIONS: ModelOption[] = [
   { id: 'haiku', name: 'Claude Haiku 3.5', provider: 'Anthropic', cost: 'Low' },
   {
     id: 'openrouter-free',
-    name: 'Gemini Flash (Free)',
+    name: 'Qwen 3.6 Plus (Free)',
     provider: 'OpenRouter',
     cost: 'Free',
   },
@@ -36,7 +36,7 @@ export const MODEL_OPTIONS: ModelOption[] = [
   },
 ]
 
-export const DEFAULT_MODEL_ID = 'gemini-flash'
+export const DEFAULT_MODEL_ID = 'deepseek'
 
 export function getChatModel(modelId?: string) {
   const id = modelId ?? process.env.AI_MODEL ?? DEFAULT_MODEL_ID
@@ -52,8 +52,9 @@ export function getChatModel(modelId?: string) {
       const deepseek = createOpenAI({
         baseURL: 'https://api.deepseek.com/v1',
         apiKey: process.env.DEEPSEEK_API_KEY,
+        compatibility: 'compatible',
       })
-      return deepseek('deepseek-chat')
+      return deepseek.chat('deepseek-chat')
     }
 
     case 'haiku':
@@ -63,8 +64,9 @@ export function getChatModel(modelId?: string) {
       const openrouter = createOpenAI({
         baseURL: 'https://openrouter.ai/api/v1',
         apiKey: process.env.OPENROUTER_API_KEY,
+        compatibility: 'compatible',
       })
-      return openrouter('google/gemini-2.0-flash-exp:free')
+      return openrouter.chat('qwen/qwen3.6-plus-preview:free')
     }
 
     case 'sonnet':
