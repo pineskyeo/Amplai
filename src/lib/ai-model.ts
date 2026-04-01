@@ -52,7 +52,7 @@ export function getChatModel(modelId?: string) {
       const deepseek = createOpenAI({
         baseURL: 'https://api.deepseek.com/v1',
         apiKey: process.env.DEEPSEEK_API_KEY,
-        compatibility: 'compatible',
+        name: 'custom',
       })
       return deepseek.chat('deepseek-chat')
     }
@@ -64,7 +64,7 @@ export function getChatModel(modelId?: string) {
       const openrouter = createOpenAI({
         baseURL: 'https://openrouter.ai/api/v1',
         apiKey: process.env.OPENROUTER_API_KEY,
-        compatibility: 'compatible',
+        name: 'custom',
       })
       return openrouter.chat('qwen/qwen3.6-plus-preview:free')
     }

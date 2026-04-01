@@ -1,0 +1,17 @@
+{
+  "id": "long-10turn",
+  "name": "긴 대화 (10턴)",
+  "description": "아이디어에서 상세 설계까지. 대화 압축 효과 측정에 적합.",
+  "messages": [
+    { "role": "user", "content": "AI로 영어 학습을 도와주는 서비스를 만들고 싶어" },
+    { "role": "user", "content": "대화하면서 모르는 단어를 물어보면 뜻이랑 어원을 알려주는 거야" },
+    { "role": "user", "content": "기존에 비슷한 서비스가 있어?" },
+    { "role": "user", "content": "차별점을 만들려면 어떻게 해야 할까?" },
+    { "role": "user", "content": "데이터 분석 기능을 넣고 싶어. 자주 틀리는 단어 패턴 같은 거" },
+    { "role": "user", "content": "그러면 DB는 뭘 써야 해?" },
+    { "role": "user", "content": "사용자 인증은 어떻게 하지?" },
+    { "role": "user", "content": "MVP 범위를 좁혀보자. 핵심 기능 3개만 뽑아줘" },
+    { "role": "user", "content": "수익 모델은 어떤 게 가능할까?" },
+    { "role": "user", "content": "좋아, 이 정도면 개발 시작할 수 있을 것 같아. 정리해줘" }
+  ]
+}

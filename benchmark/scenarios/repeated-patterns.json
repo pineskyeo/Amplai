@@ -1,0 +1,12 @@
+{
+  "id": "repeated-5turn",
+  "name": "반복 패턴 (5턴)",
+  "description": "비슷한 질문을 다른 표현으로 반복. Semantic Caching 효과 측정에 적합.",
+  "messages": [
+    { "role": "user", "content": "배달 앱 만들어줘" },
+    { "role": "user", "content": "음식 배달 서비스 개발하고 싶어" },
+    { "role": "user", "content": "배달 플랫폼을 구축하려면 어떻게 해야 해?" },
+    { "role": "user", "content": "음식 주문 앱을 만드는 방법 알려줘" },
+    { "role": "user", "content": "딜리버리 앱 개발에 필요한 게 뭐야?" }
+  ]
+}

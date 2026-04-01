@@ -2,6 +2,8 @@ import { streamText, convertToModelMessages, type UIMessage } from 'ai'
 
 import { getChatModel } from '@/lib/ai-model'
 import { trackUsage, calculateCost } from '@/lib/token-tracker'
+import { saveTokenUsage } from '@/lib/supabase-tracker'
+import { trackGeneration, flushLangfuse } from '@/lib/langfuse-client'
 
 const SYSTEM_PROMPT = `당신은 Amplai의 AI 엔지니어 컨설턴트입니다.
 
@@ -30,32 +32,66 @@ const SYSTEM_PROMPT = `당신은 Amplai의 AI 엔지니어 컨설턴트입니다
 - **결정사항**: 확정된 방향`
 
 export async function POST(req: Request) {
-  const { messages, modelId } = (await req.json()) as {
-    messages: UIMessage[]
-    modelId?: string
-  }
+  const { messages, modelId, scenarioId, optimizationLevel } =
+    (await req.json()) as {
+      messages: UIMessage[]
+      modelId?: string
+      scenarioId?: string
+      optimizationLevel?: number
+    }
 
-  const resolvedModelId = modelId ?? process.env.AI_MODEL ?? 'gemini-flash'
+  const resolvedModelId = modelId ?? process.env.AI_MODEL ?? 'deepseek'
   const startTime = Date.now()
 
   const result = streamText({
     model: getChatModel(resolvedModelId),
     system: SYSTEM_PROMPT,
     messages: await convertToModelMessages(messages),
-    onFinish: ({ usage }) => {
+    onFinish: async ({ usage, text }) => {
       const latencyMs = Date.now() - startTime
       const inputTokens = usage?.inputTokens ?? 0
       const outputTokens = usage?.outputTokens ?? 0
+      const costUsd = calculateCost(resolvedModelId, inputTokens, outputTokens)
 
+      // 1. In-memory (for UI stats bar)
       trackUsage({
         inputTokens,
         outputTokens,
         model: resolvedModelId,
-        costUsd: calculateCost(resolvedModelId, inputTokens, outputTokens),
+        costUsd,
         latencyMs,
         timestamp: Date.now(),
         cached: false,
       })
+
+      // 2. Supabase (persistent)
+      void saveTokenUsage({
+        model: resolvedModelId,
+        input_tokens: inputTokens,
+        output_tokens: outputTokens,
+        cost_usd: costUsd,
+        latency_ms: latencyMs,
+        scenario_id: scenarioId,
+        optimization_level: optimizationLevel,
+        cached: false,
+      })
+
+      // 3. Langfuse (observability)
+      trackGeneration(undefined, {
+        name: 'chat',
+        model: resolvedModelId,
+        input: messages.map((m) => ({ role: m.role, parts: m.parts })),
+        output: text,
+        usage: {
+          inputTokens,
+          outputTokens,
+          totalTokens: inputTokens + outputTokens,
+        },
+        costUsd,
+        latencyMs,
+        metadata: { scenarioId, optimizationLevel },
+      })
+      void flushLangfuse()
     },
   })
 

@@ -1,0 +1,10 @@
+{
+  "id": "short-3turn",
+  "name": "짧은 대화 (3턴)",
+  "description": "간단한 아이디어에서 기술 스택까지. Prompt Caching 효과 측정에 적합.",
+  "messages": [
+    { "role": "user", "content": "배달 앱을 만들고 싶어" },
+    { "role": "user", "content": "고객용이야. 음식 주문하고 배달 추적하는 기능이 필요해" },
+    { "role": "user", "content": "기술 스택은 뭘로 하면 좋을까?" }
+  ]
+}

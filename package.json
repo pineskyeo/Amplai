@@ -11,7 +11,8 @@
     "prepare": "husky",
     "notion:commit": "tsx scripts/log-commit.ts",
     "notion:log": "tsx scripts/log-session.ts",
-    "notion:cleanup": "tsx scripts/notion-cleanup.ts"
+    "notion:cleanup": "tsx scripts/notion-cleanup.ts",
+    "benchmark": "tsx benchmark/run-benchmark.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.64",
@@ -23,6 +24,7 @@
     "@supabase/supabase-js": "^2.100.1",
     "ai": "^6.0.140",
     "clsx": "^2.1.1",
+    "langfuse": "^3.38.20",
     "lucide-react": "^1.7.0",
     "next": "16.2.1",
     "puppeteer": "^24.40.0",
