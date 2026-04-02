@@ -1,12 +1,22 @@
 import { generateRequirementSummary } from '@/features/chat/api'
+import { getMessagesForApi } from '@/lib/conversation-store'
 
 export async function POST(req: Request) {
-  const { messages, modelId } = (await req.json()) as {
-    messages: Array<{ role: string; content: string }>
-    modelId?: string
+  try {
+    const { conversationId } = (await req.json()) as {
+      conversationId: string
+    }
+
+    const messages = getMessagesForApi(conversationId)
+    if (messages.length === 0) {
+      return Response.json({ requirement: '' })
+    }
+
+    const requirement = await generateRequirementSummary(messages)
+    return Response.json({ requirement })
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[extract-requirement]', err)
+    return Response.json({ requirement: '' })
   }
-
-  const requirement = await generateRequirementSummary(messages, modelId)
-
-  return Response.json({ requirement })
 }

@@ -4,6 +4,7 @@ import { getChatModel } from '@/lib/ai-model'
 import { trackUsage, calculateCost } from '@/lib/token-tracker'
 import { saveTokenUsage } from '@/lib/supabase-tracker'
 import { trackGeneration, flushLangfuse } from '@/lib/langfuse-client'
+import { getOrCreateConversation, addMessage } from '@/lib/conversation-store'
 
 const SYSTEM_PROMPT = `당신은 Amplai의 AI 엔지니어 컨설턴트입니다.
 
@@ -32,16 +33,31 @@ const SYSTEM_PROMPT = `당신은 Amplai의 AI 엔지니어 컨설턴트입니다
 - **결정사항**: 확정된 방향`
 
 export async function POST(req: Request) {
-  const { messages, modelId, scenarioId, optimizationLevel } =
+  const { messages, modelId, conversationId, scenarioId, optimizationLevel } =
     (await req.json()) as {
       messages: UIMessage[]
       modelId?: string
+      conversationId?: string
       scenarioId?: string
       optimizationLevel?: number
     }
 
   const resolvedModelId = modelId ?? process.env.AI_MODEL ?? 'deepseek'
   const startTime = Date.now()
+
+  // Store user message server-side
+  const conv = getOrCreateConversation(conversationId)
+  const lastUserMsg = messages[messages.length - 1]
+  if (lastUserMsg?.role === 'user') {
+    const userText =
+      lastUserMsg.parts
+        ?.filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+        .map((p) => p.text)
+        .join('') ?? ''
+    if (userText) {
+      addMessage(conv.id, 'user', userText)
+    }
+  }
 
   const result = streamText({
     model: getChatModel(resolvedModelId),
@@ -52,6 +68,11 @@ export async function POST(req: Request) {
       const inputTokens = usage?.inputTokens ?? 0
       const outputTokens = usage?.outputTokens ?? 0
       const costUsd = calculateCost(resolvedModelId, inputTokens, outputTokens)
+
+      // Store assistant response server-side
+      if (text) {
+        addMessage(conv.id, 'assistant', text)
+      }
 
       // 1. In-memory (for UI stats bar)
       trackUsage({
@@ -73,6 +94,7 @@ export async function POST(req: Request) {
         latency_ms: latencyMs,
         scenario_id: scenarioId,
         optimization_level: optimizationLevel,
+        session_id: conv.id,
         cached: false,
       })
 
@@ -89,11 +111,14 @@ export async function POST(req: Request) {
         },
         costUsd,
         latencyMs,
-        metadata: { scenarioId, optimizationLevel },
+        metadata: { scenarioId, optimizationLevel, conversationId: conv.id },
       })
       void flushLangfuse()
     },
   })
 
-  return result.toUIMessageStreamResponse()
+  // Include conversationId in response headers
+  const response = result.toUIMessageStreamResponse()
+  response.headers.set('X-Conversation-Id', conv.id)
+  return response
 }

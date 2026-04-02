@@ -1,12 +1,22 @@
 import { extractTopicsFromMessages } from '@/features/chat/api'
+import { getMessagesForApi } from '@/lib/conversation-store'
 
 export async function POST(req: Request) {
-  const { messages, modelId } = (await req.json()) as {
-    messages: Array<{ role: string; content: string }>
-    modelId?: string
+  try {
+    const { conversationId } = (await req.json()) as {
+      conversationId: string
+    }
+
+    const messages = getMessagesForApi(conversationId)
+    if (messages.length === 0) {
+      return Response.json({ topics: [] })
+    }
+
+    const topics = await extractTopicsFromMessages(messages)
+    return Response.json({ topics })
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[extract-topics]', err)
+    return Response.json({ topics: [] })
   }
-
-  const topics = await extractTopicsFromMessages(messages, modelId)
-
-  return Response.json({ topics })
 }
