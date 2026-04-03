@@ -24,6 +24,7 @@ export default function ChatPage() {
     setSidebarOpen,
     extractTopics,
     handleStartDevelopment,
+    handleNewConversation,
     viewModel,
     selectedModel,
     setSelectedModel,
@@ -58,6 +59,15 @@ export default function ChatPage() {
               </option>
             ))}
           </select>
+          {/* New conversation */}
+          {messages.length > 0 && (
+            <button
+              onClick={handleNewConversation}
+              className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
+            >
+              + 새 대화
+            </button>
+          )}
           {/* Mobile sidebar toggle */}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
