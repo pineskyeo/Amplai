@@ -1,11 +1,10 @@
 'use client'
 
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import {
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  Radar,
+  BarChart,
+  Bar,
   ResponsiveContainer,
   LineChart,
   Line,
@@ -14,276 +13,353 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
+  AreaChart,
+  Area,
   PieChart,
   Pie,
   Cell,
 } from 'recharts'
 
-const RADAR_DATA = [
-  { subject: '문맥성', value: 82, fullMark: 100 },
-  { subject: '충실도', value: 90, fullMark: 100 },
-  { subject: '관련성', value: 68, fullMark: 100 },
-  { subject: '명확성', value: 81, fullMark: 100 },
-  { subject: '일관성', value: 77, fullMark: 100 },
-]
-
-const LINE_DATA = [
-  { name: 'Run 1', codex: 52, gemini: 65, claude: 88 },
-  { name: 'Run 2', codex: 58, gemini: 68, claude: 91 },
-  { name: 'Run 3', codex: 55, gemini: 70, claude: 95 },
-  { name: 'Run 4', codex: 60, gemini: 72, claude: 98 },
-  { name: 'Run 5', codex: 52, gemini: 70, claude: 100 },
-]
-
-const PIE_DATA = [
-  { name: '통과', value: 55, color: '#22c55e' },
-  { name: '실패', value: 45, color: '#e5e7eb' },
-]
-
-const QUALITY_LINE_DATA = [
-  { name: 'Jan', faithfulness: 0.75, relevance: 0.62, precision: 0.8 },
-  { name: 'Feb', faithfulness: 0.78, relevance: 0.65, precision: 0.82 },
-  { name: 'Mar', faithfulness: 0.82, relevance: 0.68, precision: 0.9 },
-]
-
-interface MetricCardProps {
-  label: string
-  value: number
-  grade: string
-  delta: string
-  positive: boolean
+interface DashboardData {
+  summary: {
+    totalRequests: number
+    totalInputTokens: number
+    totalOutputTokens: number
+    totalTokens: number
+    totalCostUsd: number
+    avgLatencyMs: number
+  }
+  modelBreakdown: Array<{
+    model: string
+    input: number
+    output: number
+    cost: number
+    count: number
+    avgLatency: number
+  }>
+  timeline: Array<{
+    time: string
+    input: number
+    output: number
+    cost: number
+    count: number
+  }>
+  cumulativeCost: Array<{ time: string; cost: number }>
+  tokenGrowth: Array<{
+    turn: number
+    input: number
+    output: number
+    total: number
+  }>
+  optimizationLevels: Array<{
+    level: number
+    input: number
+    output: number
+    cost: number
+    count: number
+    avgLatency: number
+  }>
 }
 
-function MetricCard({ label, value, grade, delta, positive }: MetricCardProps) {
+const PIE_COLORS = [
+  '#111827',
+  '#6b7280',
+  '#d1d5db',
+  '#3b82f6',
+  '#22c55e',
+  '#f59e0b',
+]
+
+interface StatCardProps {
+  label: string
+  value: string
+  sub?: string
+}
+
+function StatCard({ label, value, sub }: StatCardProps) {
   return (
-    <div className="border border-gray-200 rounded-lg p-5">
-      <p className="text-xs text-gray-500 mb-1">{label}</p>
-      <div className="flex items-end justify-between">
-        <p className="text-3xl font-bold text-gray-900">{value.toFixed(2)}</p>
-        <div className="text-right">
-          <span
-            className={`text-xs font-semibold px-1.5 py-0.5 rounded ${
-              grade === '상'
-                ? 'bg-green-50 text-green-700'
-                : grade === '중'
-                  ? 'bg-yellow-50 text-yellow-700'
-                  : 'bg-red-50 text-red-600'
-            }`}
-          >
-            {grade}
-          </span>
-          <p
-            className={`text-xs mt-1 ${positive ? 'text-green-600' : 'text-red-500'}`}
-          >
-            {positive ? '↑' : '↓'} {delta}
-          </p>
-        </div>
-      </div>
+    <div className="rounded-lg border border-gray-200 p-5">
+      <p className="text-xs text-gray-500">{label}</p>
+      <p className="mt-1 text-2xl font-bold text-gray-900">{value}</p>
+      {sub && <p className="mt-0.5 text-xs text-gray-400">{sub}</p>}
     </div>
   )
 }
 
 export default function DashboardPage() {
+  const [data, setData] = useState<DashboardData | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  const fetchData = useCallback(async () => {
+    try {
+      const res = await fetch('/api/dashboard')
+      const json = (await res.json()) as DashboardData
+      setData(json)
+    } catch {
+      // Silent
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void fetchData()
+    const interval = setInterval(() => void fetchData(), 10000)
+    return () => clearInterval(interval)
+  }, [fetchData])
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-sm text-gray-400">Loading dashboard...</p>
+      </div>
+    )
+  }
+
+  if (!data || data.summary.totalRequests === 0) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4">
+        <p className="text-sm text-gray-400">
+          데이터가 없습니다. Chat에서 대화를 시작하세요.
+        </p>
+        <Link
+          href="/"
+          className="rounded-lg border border-gray-200 px-4 py-2 text-sm hover:bg-gray-50"
+        >
+          ← Chat으로 이동
+        </Link>
+      </div>
+    )
+  }
+
+  const { summary } = data
+
   return (
     <div className="min-h-screen bg-white">
-      <div className="border-b border-gray-200 px-8 py-4 flex items-center justify-between">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-gray-200 px-4 py-4 md:px-8">
         <div>
           <h1 className="text-lg font-semibold text-gray-900">
             Amplai Dashboard
           </h1>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Evaluation Metrics — Quality Tracking
+          <p className="mt-0.5 text-xs text-gray-500">
+            LLM Token Usage & Cost Observability
           </p>
         </div>
-        <Link
-          href="/"
-          className="px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-200 rounded hover:bg-gray-50 transition-colors"
-        >
-          ← Benchmark
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href="/"
+            className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+          >
+            ← Chat
+          </Link>
+          <Link
+            href="/benchmark"
+            className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+          >
+            Benchmark
+          </Link>
+        </div>
       </div>
 
-      <div className="px-8 py-8">
-        {/* Metric Cards */}
-        <div className="grid grid-cols-4 gap-4 mb-8">
-          <MetricCard
-            label="문맥성"
-            value={0.82}
-            grade="상"
-            delta="0.04"
-            positive={true}
+      <div className="px-4 py-6 md:px-8 md:py-8">
+        {/* Summary Cards */}
+        <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">
+          <StatCard
+            label="Total Requests"
+            value={summary.totalRequests.toLocaleString()}
           />
-          <MetricCard
-            label="답변 충실도"
-            value={0.9}
-            grade="상"
-            delta="0.02"
-            positive={true}
+          <StatCard
+            label="Total Tokens"
+            value={summary.totalTokens.toLocaleString()}
+            sub={`in: ${summary.totalInputTokens.toLocaleString()} / out: ${summary.totalOutputTokens.toLocaleString()}`}
           />
-          <MetricCard
-            label="답변 관련성"
-            value={0.68}
-            grade="중"
-            delta="0.03"
-            positive={false}
+          <StatCard
+            label="Total Cost"
+            value={`$${summary.totalCostUsd.toFixed(4)}`}
           />
-          <MetricCard
-            label="답변의 명확성"
-            value={0.81}
-            grade="상"
-            delta="0.01"
-            positive={true}
+          <StatCard
+            label="Avg Latency"
+            value={`${summary.avgLatencyMs.toLocaleString()}ms`}
           />
         </div>
 
         {/* Charts Grid */}
-        <div className="grid grid-cols-2 gap-6">
-          {/* Radar Chart */}
-          <div className="border border-gray-200 rounded-lg p-5">
-            <h3 className="text-sm font-semibold text-gray-700 mb-4">
-              적절 균형 (Quality Balance)
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          {/* Token Growth per Turn */}
+          <div className="rounded-lg border border-gray-200 p-5">
+            <h3 className="mb-4 text-sm font-semibold text-gray-700">
+              턴별 토큰 증가 추이
             </h3>
             <ResponsiveContainer width="100%" height={240}>
-              <RadarChart data={RADAR_DATA}>
-                <PolarGrid stroke="#e5e7eb" />
-                <PolarAngleAxis
-                  dataKey="subject"
-                  tick={{ fontSize: 11, fill: '#6b7280' }}
-                />
-                <Radar
-                  name="Score"
-                  dataKey="value"
+              <AreaChart data={data.tokenGrowth}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                <XAxis dataKey="turn" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <Tooltip />
+                <Legend />
+                <Area
+                  type="monotone"
+                  dataKey="input"
+                  stackId="1"
                   stroke="#111827"
                   fill="#111827"
-                  fillOpacity={0.1}
-                  strokeWidth={2}
+                  fillOpacity={0.3}
+                  name="Input"
                 />
-              </RadarChart>
+                <Area
+                  type="monotone"
+                  dataKey="output"
+                  stackId="1"
+                  stroke="#6b7280"
+                  fill="#6b7280"
+                  fillOpacity={0.2}
+                  name="Output"
+                />
+              </AreaChart>
             </ResponsiveContainer>
           </div>
 
-          {/* Line Chart — Lint Score Trend */}
-          <div className="border border-gray-200 rounded-lg p-5">
-            <h3 className="text-sm font-semibold text-gray-700 mb-4">
-              주문별 품질 추적 (Lint Score Trend)
+          {/* Cumulative Cost */}
+          <div className="rounded-lg border border-gray-200 p-5">
+            <h3 className="mb-4 text-sm font-semibold text-gray-700">
+              누적 비용 추이
             </h3>
             <ResponsiveContainer width="100%" height={240}>
-              <LineChart data={LINE_DATA}>
+              <LineChart data={data.cumulativeCost}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} domain={[40, 110]} />
-                <Tooltip />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="codex"
-                  stroke="#ef4444"
-                  strokeWidth={1.5}
-                  dot={{ r: 3 }}
-                  name="Codex"
+                <XAxis dataKey="time" tick={{ fontSize: 10 }} />
+                <YAxis
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={(v: number) => `$${v.toFixed(3)}`}
+                />
+                <Tooltip
+                  formatter={(value) => `$${Number(value).toFixed(4)}`}
                 />
                 <Line
                   type="monotone"
-                  dataKey="gemini"
-                  stroke="#f59e0b"
-                  strokeWidth={1.5}
-                  dot={{ r: 3 }}
-                  name="Gemini"
-                />
-                <Line
-                  type="monotone"
-                  dataKey="claude"
-                  stroke="#22c55e"
-                  strokeWidth={1.5}
-                  dot={{ r: 3 }}
-                  name="Claude"
+                  dataKey="cost"
+                  stroke="#111827"
+                  strokeWidth={2}
+                  dot={false}
+                  name="Cumulative Cost"
                 />
               </LineChart>
             </ResponsiveContainer>
           </div>
 
-          {/* Donut Chart */}
-          <div className="border border-gray-200 rounded-lg p-5">
-            <h3 className="text-sm font-semibold text-gray-700 mb-4">
-              전체 룰 통과율
+          {/* Model Breakdown — Bar Chart */}
+          <div className="rounded-lg border border-gray-200 p-5">
+            <h3 className="mb-4 text-sm font-semibold text-gray-700">
+              모델별 토큰 사용량
             </h3>
-            <div className="flex items-center gap-8">
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={data.modelBreakdown}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                <XAxis dataKey="model" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <Tooltip />
+                <Legend />
+                <Bar
+                  dataKey="input"
+                  fill="#111827"
+                  name="Input"
+                  radius={[2, 2, 0, 0]}
+                />
+                <Bar
+                  dataKey="output"
+                  fill="#9ca3af"
+                  name="Output"
+                  radius={[2, 2, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Model Breakdown — Pie Chart (Cost) */}
+          <div className="rounded-lg border border-gray-200 p-5">
+            <h3 className="mb-4 text-sm font-semibold text-gray-700">
+              모델별 비용 비중
+            </h3>
+            <div className="flex items-center gap-6">
               <ResponsiveContainer width={180} height={180}>
                 <PieChart>
                   <Pie
-                    data={PIE_DATA}
-                    innerRadius={55}
+                    data={data.modelBreakdown}
+                    innerRadius={50}
                     outerRadius={80}
-                    dataKey="value"
+                    dataKey="cost"
+                    nameKey="model"
                     startAngle={90}
                     endAngle={-270}
                   >
-                    {PIE_DATA.map((entry, index) => (
-                      <Cell key={index} fill={entry.color} />
+                    {data.modelBreakdown.map((_, i) => (
+                      <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                     ))}
                   </Pie>
+                  <Tooltip
+                    formatter={(value) => `$${Number(value).toFixed(4)}`}
+                  />
                 </PieChart>
               </ResponsiveContainer>
-              <div>
-                <p className="text-4xl font-bold text-gray-900">55.0%</p>
-                <p className="text-sm text-gray-500 mt-1">overall pass rate</p>
-                <div className="mt-3 space-y-1">
-                  {PIE_DATA.map((d) => (
-                    <div key={d.name} className="flex items-center gap-2">
-                      <span
-                        className="w-2.5 h-2.5 rounded-full"
-                        style={{ background: d.color }}
-                      />
-                      <span className="text-xs text-gray-600">
-                        {d.name} ({d.value}%)
-                      </span>
-                    </div>
-                  ))}
+              <div className="space-y-2">
+                {data.modelBreakdown.map((m, i) => (
+                  <div key={m.model} className="flex items-center gap-2">
+                    <span
+                      className="h-2.5 w-2.5 rounded-full"
+                      style={{
+                        background: PIE_COLORS[i % PIE_COLORS.length],
+                      }}
+                    />
+                    <span className="text-xs text-gray-600">
+                      {m.model} ({m.count}x) — ${m.cost.toFixed(4)}
+                    </span>
+                  </div>
+                ))}
+                <div className="mt-2 border-t border-gray-100 pt-2">
+                  <p className="text-lg font-bold text-gray-900">
+                    ${summary.totalCostUsd.toFixed(4)}
+                  </p>
+                  <p className="text-[10px] text-gray-400">total cost</p>
                 </div>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Quality Line Chart */}
-          <div className="border border-gray-200 rounded-lg p-5">
-            <h3 className="text-sm font-semibold text-gray-700 mb-4">
-              음식점 + 일반관련성 추이
+        {/* Optimization Level Comparison (shows when benchmark data exists) */}
+        {data.optimizationLevels.length > 1 && (
+          <div className="mt-6 rounded-lg border border-gray-200 p-5">
+            <h3 className="mb-4 text-sm font-semibold text-gray-700">
+              최적화 단계별 비교
             </h3>
-            <ResponsiveContainer width="100%" height={180}>
-              <LineChart data={QUALITY_LINE_DATA}>
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={data.optimizationLevels}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} domain={[0.5, 1.0]} />
+                <XAxis
+                  dataKey="level"
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={(v: number) => `Level ${v}`}
+                />
+                <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip />
                 <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="faithfulness"
-                  stroke="#6366f1"
-                  strokeWidth={1.5}
-                  dot={{ r: 3 }}
-                  name="충실도"
+                <Bar
+                  dataKey="input"
+                  fill="#111827"
+                  name="Input Tokens"
+                  radius={[2, 2, 0, 0]}
                 />
-                <Line
-                  type="monotone"
-                  dataKey="relevance"
-                  stroke="#f59e0b"
-                  strokeWidth={1.5}
-                  dot={{ r: 3 }}
-                  name="관련성"
+                <Bar
+                  dataKey="output"
+                  fill="#9ca3af"
+                  name="Output Tokens"
+                  radius={[2, 2, 0, 0]}
                 />
-                <Line
-                  type="monotone"
-                  dataKey="precision"
-                  stroke="#22c55e"
-                  strokeWidth={1.5}
-                  dot={{ r: 3 }}
-                  name="정밀도"
-                />
-              </LineChart>
+              </BarChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        )}
       </div>
     </div>
   )
