@@ -11,6 +11,7 @@ import CodeTab from '@/features/code/components/code-tab'
 import LintTab from '@/features/lint/components/lint-tab'
 import NormalFormTab from '@/features/evaluation/components/normal-form-tab'
 import Logo from '@/components/ui/logo'
+import BenchmarkTestPanel from '@/features/benchmark-test/components/benchmark-test-panel'
 import type { TabId, AIModel, Case, BenchmarkResult } from '@/types'
 
 const TABS: { id: TabId; label: string }[] = [
@@ -188,6 +189,11 @@ function BenchmarkPage() {
           <LintTab runId={runId} benchmarkResult={benchmarkResult} />
         )}
         {activeTab === '06-normal-form' && <NormalFormTab runId={runId} />}
+
+        {/* Benchmark Test Panel */}
+        <div className="mt-8">
+          <BenchmarkTestPanel />
+        </div>
       </div>
     </div>
   )
