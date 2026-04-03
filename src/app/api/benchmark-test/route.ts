@@ -3,11 +3,6 @@ import { streamText, convertToModelMessages, type UIMessage } from 'ai'
 import { getChatModel } from '@/lib/ai-model'
 import { trackUsage, calculateCost } from '@/lib/token-tracker'
 import { saveTokenUsage } from '@/lib/supabase-tracker'
-import {
-  setBenchmarkRunning,
-  updateBenchmarkProgress,
-  setBenchmarkDone,
-} from '@/lib/benchmark-status'
 
 const SYSTEM_PROMPT = `당신은 Amplai의 AI 엔지니어 컨설턴트입니다. 한국어로 대화합니다. 기술 용어는 영어를 유지합니다.`
 
@@ -34,10 +29,7 @@ export async function POST(req: Request) {
   const results: TurnResult[] = []
   const conversationMessages: UIMessage[] = []
 
-  setBenchmarkRunning(messages.length, scenarioId, modelId)
-
   for (let i = 0; i < messages.length; i++) {
-    updateBenchmarkProgress(i, scenarioId, modelId)
     const userMsg = messages[i]
 
     conversationMessages.push({
@@ -102,8 +94,6 @@ export async function POST(req: Request) {
       responsePreview: assistantText.substring(0, 100),
     })
   }
-
-  setBenchmarkDone()
 
   const totals = {
     inputTokens: results.reduce((s, r) => s + r.inputTokens, 0),

@@ -1,5 +1,28 @@
 // Global benchmark status — visible from any page
 
+export interface BenchmarkRunResult {
+  scenarioId: string
+  scenarioName: string
+  modelId: string
+  optimizationLevel: number
+  timestamp: string
+  turns: Array<{
+    turn: number
+    inputTokens: number
+    outputTokens: number
+    costUsd: number
+    latencyMs: number
+    responsePreview: string
+  }>
+  totals: {
+    inputTokens: number
+    outputTokens: number
+    totalTokens: number
+    costUsd: number
+    avgLatencyMs: number
+  }
+}
+
 interface BenchmarkStatus {
   isRunning: boolean
   progress: string
@@ -8,6 +31,7 @@ interface BenchmarkStatus {
   currentScenario?: string
   currentModel?: string
   startedAt?: number
+  results: BenchmarkRunResult[]
 }
 
 let status: BenchmarkStatus = {
@@ -15,10 +39,11 @@ let status: BenchmarkStatus = {
   progress: '',
   totalRuns: 0,
   completedRuns: 0,
+  results: [],
 }
 
 export function getBenchmarkStatus(): BenchmarkStatus {
-  return { ...status }
+  return { ...status, results: [...status.results] }
 }
 
 export function setBenchmarkRunning(
@@ -28,31 +53,34 @@ export function setBenchmarkRunning(
 ): void {
   status = {
     isRunning: true,
-    progress: `${scenario} × ${model}`,
+    progress: `0/${total}: 준비 중...`,
     totalRuns: total,
     completedRuns: 0,
     currentScenario: scenario,
     currentModel: model,
     startedAt: Date.now(),
+    results: [],
   }
 }
 
 export function updateBenchmarkProgress(
   completed: number,
+  total: number,
   scenario: string,
   model: string
 ): void {
   status.completedRuns = completed
+  status.totalRuns = total
   status.currentScenario = scenario
   status.currentModel = model
-  status.progress = `${completed}/${status.totalRuns}: ${scenario} × ${model}`
+  status.progress = `${completed}/${total}: ${scenario} × ${model}`
+}
+
+export function addBenchmarkResult(result: BenchmarkRunResult): void {
+  status.results.push(result)
 }
 
 export function setBenchmarkDone(): void {
-  status = {
-    isRunning: false,
-    progress: '',
-    totalRuns: 0,
-    completedRuns: 0,
-  }
+  status.isRunning = false
+  status.progress = `완료 (${status.results.length}건)`
 }
