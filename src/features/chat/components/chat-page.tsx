@@ -10,6 +10,7 @@ import { useChatPagePresenter } from '../chat-page-presenter'
 import MessageBubble from './message-bubble'
 import ChatInput from './chat-input'
 import ConversationSidebar from './conversation-sidebar'
+import Conversations from './conversations'
 import TokenStatsBar from './token-stats-bar'
 
 export default function ChatPage() {
@@ -25,9 +26,11 @@ export default function ChatPage() {
     extractTopics,
     handleStartDevelopment,
     handleNewConversation,
+    switchConversation,
     viewModel,
     selectedModel,
     setSelectedModel,
+    conversationId,
   } = useChatPagePresenter()
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -59,15 +62,6 @@ export default function ChatPage() {
               </option>
             ))}
           </select>
-          {/* New conversation */}
-          {messages.length > 0 && (
-            <button
-              onClick={handleNewConversation}
-              className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
-            >
-              + 새 대화
-            </button>
-          )}
           {/* Mobile sidebar toggle */}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -81,11 +75,26 @@ export default function ChatPage() {
           >
             Benchmark
           </Link>
+          <Link
+            href="/dashboard"
+            className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
+          >
+            Dashboard
+          </Link>
         </div>
       </div>
 
       {/* Main area */}
       <div className="flex min-h-0 flex-1">
+        {/* Left sidebar — conversation list */}
+        <div className="hidden md:flex">
+          <Conversations
+            currentId={conversationId}
+            onSelect={switchConversation}
+            onNewConversation={handleNewConversation}
+          />
+        </div>
+
         {/* Chat area */}
         <div className="flex min-w-0 flex-1 flex-col">
           {/* Messages */}
@@ -147,7 +156,7 @@ export default function ChatPage() {
           </div>
         </div>
 
-        {/* Sidebar — desktop always, mobile overlay */}
+        {/* Right sidebar — topics */}
         <div
           className={cn(
             'w-72 shrink-0 border-l border-gray-200 bg-white',

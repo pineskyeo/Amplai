@@ -9,7 +9,6 @@ import type { ConversationTopicModel } from '@/types'
 import { DEFAULT_MODEL_ID } from '@/lib/ai-model'
 import { createChatPageViewModel } from './chat-page-view-model'
 
-// Persist conversationId in sessionStorage so it survives navigation
 function getStoredConversationId(): string {
   if (typeof window === 'undefined') return ''
   return sessionStorage.getItem('amplai-conversation-id') ?? ''
@@ -21,6 +20,10 @@ function storeConversationId(id: string): void {
   }
 }
 
+function generateConversationId(): string {
+  return `conv_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+}
+
 export function useChatPagePresenter() {
   const router = useRouter()
   const [topics, setTopics] = useState<ConversationTopicModel[]>([])
@@ -28,10 +31,10 @@ export function useChatPagePresenter() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [input, setInput] = useState('')
   const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL_ID)
-  const [conversationId] = useState(() => {
+  const [conversationId, setConversationId] = useState(() => {
     const stored = getStoredConversationId()
     if (stored) return stored
-    const newId = `conv_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+    const newId = generateConversationId()
     storeConversationId(newId)
     return newId
   })
@@ -47,21 +50,34 @@ export function useChatPagePresenter() {
     },
   })
 
-  // Restore messages from server when page loads
-  useEffect(() => {
-    if (restoredRef.current || !conversationId) return
-    restoredRef.current = true
-
-    fetch(`/api/chat/messages?conversationId=${conversationId}`)
-      .then((res) => res.json())
-      .then((data: { messages: UIMessage[] }) => {
+  // Restore messages when conversationId changes
+  const loadConversation = useCallback(
+    async (convId: string) => {
+      try {
+        const res = await fetch(`/api/chat/messages?conversationId=${convId}`)
+        const data = (await res.json()) as { messages: UIMessage[] }
         if (data.messages.length > 0) {
           setMessages(data.messages)
           messageCountRef.current = Math.floor(data.messages.length / 2)
+        } else {
+          setMessages([])
+          messageCountRef.current = 0
         }
-      })
-      .catch(() => {})
-  }, [conversationId, setMessages])
+      } catch {
+        setMessages([])
+        messageCountRef.current = 0
+      }
+      setTopics([])
+    },
+    [setMessages]
+  )
+
+  // Initial load
+  useEffect(() => {
+    if (restoredRef.current || !conversationId) return
+    restoredRef.current = true
+    void loadConversation(conversationId)
+  }, [conversationId, loadConversation])
 
   const isLoading = status === 'submitted' || status === 'streaming'
 
@@ -128,10 +144,24 @@ export function useChatPagePresenter() {
   }, [conversationId, messages.length, extractTopics, router])
 
   const handleNewConversation = useCallback(() => {
-    const newId = `conv_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+    const newId = generateConversationId()
     storeConversationId(newId)
-    window.location.reload()
-  }, [])
+    setConversationId(newId)
+    setMessages([])
+    setTopics([])
+    messageCountRef.current = 0
+    restoredRef.current = true // Don't re-restore
+  }, [setMessages])
+
+  const switchConversation = useCallback(
+    (convId: string) => {
+      storeConversationId(convId)
+      setConversationId(convId)
+      restoredRef.current = true
+      void loadConversation(convId)
+    },
+    [loadConversation]
+  )
 
   const viewModel = createChatPageViewModel(messages.length, topics)
 
@@ -147,6 +177,7 @@ export function useChatPagePresenter() {
     extractTopics,
     handleStartDevelopment,
     handleNewConversation,
+    switchConversation,
     viewModel,
     selectedModel,
     setSelectedModel,
