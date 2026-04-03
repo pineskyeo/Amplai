@@ -59,6 +59,16 @@ interface DashboardData {
     count: number
     avgLatency: number
   }>
+  benchmarkResults: Array<{
+    scenarioId: string
+    scenarioName: string
+    modelId: string
+    optimizationLevel: number
+    totalTokens: number
+    costUsd: number
+    avgLatencyMs: number
+    createdAt: string
+  }>
 }
 
 const PIE_COLORS = [
@@ -358,6 +368,58 @@ export default function DashboardPage() {
                 />
               </BarChart>
             </ResponsiveContainer>
+          </div>
+        )}
+        {/* Benchmark Results History */}
+        {data.benchmarkResults.length > 0 && (
+          <div className="mt-6 rounded-lg border border-gray-200 p-5">
+            <h3 className="mb-4 text-sm font-semibold text-gray-700">
+              벤치마크 결과 이력 ({data.benchmarkResults.length}건)
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-gray-200 text-left text-gray-500">
+                    <th className="py-2 pr-3">시나리오</th>
+                    <th className="py-2 pr-3">모델</th>
+                    <th className="py-2 pr-3">Level</th>
+                    <th className="py-2 pr-3 text-right">Tokens</th>
+                    <th className="py-2 pr-3 text-right">Cost</th>
+                    <th className="py-2 pr-3 text-right">Latency</th>
+                    <th className="py-2 text-right">일시</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.benchmarkResults.map((r, i) => (
+                    <tr
+                      key={i}
+                      className="border-b border-gray-50 text-gray-700"
+                    >
+                      <td className="py-2 pr-3">{r.scenarioName}</td>
+                      <td className="py-2 pr-3">{r.modelId}</td>
+                      <td className="py-2 pr-3">L{r.optimizationLevel}</td>
+                      <td className="py-2 pr-3 text-right font-mono">
+                        {r.totalTokens.toLocaleString()}
+                      </td>
+                      <td className="py-2 pr-3 text-right font-mono">
+                        ${r.costUsd.toFixed(4)}
+                      </td>
+                      <td className="py-2 pr-3 text-right font-mono">
+                        {r.avgLatencyMs}ms
+                      </td>
+                      <td className="py-2 text-right text-gray-400">
+                        {new Date(r.createdAt).toLocaleDateString('ko-KR', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

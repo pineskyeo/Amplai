@@ -62,6 +62,13 @@ export default function ChatPage() {
               </option>
             ))}
           </select>
+          {/* Mobile: new conversation */}
+          <button
+            onClick={handleNewConversation}
+            className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50 md:hidden"
+          >
+            +
+          </button>
           {/* Mobile sidebar toggle */}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}

@@ -123,6 +123,24 @@ export async function GET() {
     l.count += 1
   }
 
+  // --- Benchmark results ---
+  const { data: benchRows } = await supabase
+    .from('benchmark_results')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(100)
+
+  const benchmarkResults = (benchRows ?? []).map((r) => ({
+    scenarioId: r.scenario_id,
+    scenarioName: r.scenario_name,
+    modelId: r.model_id,
+    optimizationLevel: r.optimization_level,
+    totalTokens: r.total_tokens,
+    costUsd: r.total_cost_usd,
+    avgLatencyMs: r.avg_latency_ms,
+    createdAt: r.created_at,
+  }))
+
   return Response.json({
     summary: {
       totalRequests: rows.length,
@@ -147,5 +165,6 @@ export async function GET() {
       cost: Number(data.cost.toFixed(4)),
       avgLatency: Math.round(data.latency / data.count),
     })),
+    benchmarkResults,
   })
 }

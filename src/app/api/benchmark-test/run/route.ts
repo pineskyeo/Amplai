@@ -1,5 +1,7 @@
 import { streamText, convertToModelMessages, type UIMessage } from 'ai'
 
+import { createClient } from '@supabase/supabase-js'
+
 import { getChatModel } from '@/lib/ai-model'
 import { calculateCost } from '@/lib/token-tracker'
 import { saveTokenUsage } from '@/lib/supabase-tracker'
@@ -56,6 +58,8 @@ async function runAllBenchmarks(
           optimizationLevel
         )
         addBenchmarkResult(result)
+        // Save to Supabase for persistence
+        void saveBenchmarkToSupabase(result)
       } catch {
         // Continue with next
       }
@@ -148,4 +152,28 @@ async function runSingleScenario(
       ),
     },
   }
+}
+
+async function saveBenchmarkToSupabase(
+  result: BenchmarkRunResult
+): Promise<void> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!url || !key) return
+
+  const supabase = createClient(url, key)
+  await supabase.from('benchmark_results').insert({
+    scenario_id: result.scenarioId,
+    scenario_name: result.scenarioName,
+    model_id: result.modelId,
+    optimization_level: result.optimizationLevel,
+    total_input_tokens: result.totals.inputTokens,
+    total_output_tokens: result.totals.outputTokens,
+    total_tokens: result.totals.totalTokens,
+    total_cost_usd: result.totals.costUsd,
+    avg_latency_ms: result.totals.avgLatencyMs,
+    turns_json: result.turns,
+  })
 }

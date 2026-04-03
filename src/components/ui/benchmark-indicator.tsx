@@ -57,7 +57,7 @@ export default function BenchmarkIndicator() {
       : 0
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-lg">
+    <div className="fixed top-16 right-4 z-50 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-lg">
       <div className="flex items-center gap-3">
         <div className="h-2 w-2 animate-pulse rounded-full bg-green-500" />
         <div>
