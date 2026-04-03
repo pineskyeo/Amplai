@@ -128,14 +128,14 @@ export default function BenchmarkTestPanel() {
     })
   }, [])
 
-  const runBenchmark = useCallback(async () => {
+  const runBenchmark = useCallback(() => {
     if (selectedScenarios.size === 0 || selectedModels.size === 0) return
 
     const scenarioList = scenarios.filter((s) => selectedScenarios.has(s.id))
     const modelList = Array.from(selectedModels)
 
     // Fire-and-forget — server runs in background
-    await fetch('/api/benchmark-test/run', {
+    void fetch('/api/benchmark-test/run', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
