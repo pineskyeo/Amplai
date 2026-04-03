@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import Link from 'next/link'
 
 import { cn } from '@/lib/utils'
@@ -33,6 +33,7 @@ export default function ChatPage() {
     conversationId,
   } = useChatPagePresenter()
 
+  const [convListOpen, setConvListOpen] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -40,21 +41,21 @@ export default function ChatPage() {
   }, [messages])
 
   return (
-    <div className="flex h-screen flex-col bg-white">
+    <div className="flex h-screen max-w-[100vw] flex-col overflow-x-hidden bg-white">
       {/* Header */}
-      <div className="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3 md:px-6">
-        <div className="flex items-center gap-3">
+      <div className="flex shrink-0 items-center justify-between border-b border-gray-200 px-2 py-2 md:px-6 md:py-3">
+        <div className="flex min-w-0 items-center gap-2">
           <Logo size="md" />
-          <span className="hidden text-xs text-gray-400 md:inline">
+          <span className="hidden text-xs text-gray-400 lg:inline">
             AI Engineer Consultant
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 md:gap-2">
           {/* Model selector */}
           <select
             value={selectedModel}
             onChange={(e) => setSelectedModel(e.target.value)}
-            className="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-600 focus:border-gray-400 focus:outline-none"
+            className="w-20 rounded-lg border border-gray-200 bg-white px-1 py-1.5 text-[10px] text-gray-600 focus:border-gray-400 focus:outline-none md:w-auto md:px-2 md:text-xs"
           >
             {MODEL_OPTIONS.map((m) => (
               <option key={m.id} value={m.id}>
@@ -62,30 +63,74 @@ export default function ChatPage() {
               </option>
             ))}
           </select>
-          {/* Mobile: new conversation */}
+          {/* Mobile: conversation list toggle */}
           <button
-            onClick={handleNewConversation}
-            className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50 md:hidden"
+            onClick={() => setConvListOpen(!convListOpen)}
+            className="rounded-lg border border-gray-200 p-1.5 text-gray-500 hover:bg-gray-50 md:hidden"
+            title="대화 목록"
           >
-            +
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M2 3h12M2 7h8M2 11h10M14 9l-2 2-2-2" />
+            </svg>
           </button>
-          {/* Mobile sidebar toggle */}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50 md:hidden"
+            className="rounded-lg border border-gray-200 p-1.5 text-gray-500 hover:bg-gray-50 md:hidden"
+            title="토픽"
           >
-            토픽 {viewModel.totalTopics > 0 && `(${viewModel.totalTopics})`}
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M2 4h12M2 8h8M2 12h10" />
+            </svg>
           </button>
           <Link
             href="/benchmark"
-            className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
+            className="rounded-lg border border-gray-200 p-1.5 text-gray-500 hover:bg-gray-50 md:px-3 md:py-1.5 md:text-xs md:text-gray-600"
+            title="Benchmark"
           >
-            Benchmark
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="md:hidden"
+            >
+              <path d="M3 13V7M7 13V3M11 13V9M15 13V5" />
+            </svg>
+            <span className="hidden md:inline">Benchmark</span>
           </Link>
           <Link
             href="/dashboard"
-            className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
+            className="rounded-lg border border-gray-200 p-1.5 text-gray-500 hover:bg-gray-50 md:px-3 md:py-1.5 md:text-xs md:text-gray-600"
+            title="Dashboard"
           >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="md:hidden"
+            >
+              <path d="M1 1h6v6H1zM9 1h6v6H9zM1 9h6v6H1zM9 9h6v6H9z" />
+            </svg>
+            <span className="hidden md:inline">Dashboard</span>
             Dashboard
           </Link>
         </div>
@@ -180,12 +225,35 @@ export default function ChatPage() {
           />
         </div>
 
-        {/* Mobile overlay backdrop */}
+        {/* Mobile overlay — topics */}
         {sidebarOpen && (
           <div
             className="fixed inset-0 z-40 bg-black/20 md:hidden"
             onClick={() => setSidebarOpen(false)}
           />
+        )}
+
+        {/* Mobile overlay — conversation list */}
+        {convListOpen && (
+          <>
+            <div
+              className="fixed inset-0 z-40 bg-black/20 md:hidden"
+              onClick={() => setConvListOpen(false)}
+            />
+            <div className="fixed inset-y-0 left-0 z-50 w-64 shadow-xl md:hidden">
+              <Conversations
+                currentId={conversationId}
+                onSelect={(id) => {
+                  switchConversation(id)
+                  setConvListOpen(false)
+                }}
+                onNewConversation={() => {
+                  handleNewConversation()
+                  setConvListOpen(false)
+                }}
+              />
+            </div>
+          </>
         )}
       </div>
     </div>
