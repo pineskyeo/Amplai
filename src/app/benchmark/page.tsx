@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import InputTab from '@/features/input/components/input-tab'
 import PlanTab from '@/features/plan/components/plan-tab'
@@ -62,7 +63,16 @@ const DEFAULT_CASES: Case[] = [
   },
 ]
 
-export default function BenchmarkPage() {
+export default function BenchmarkPageWrapper() {
+  return (
+    <Suspense>
+      <BenchmarkPage />
+    </Suspense>
+  )
+}
+
+function BenchmarkPage() {
+  const searchParams = useSearchParams()
   const [activeTab, setActiveTab] = useState<TabId>('01-input')
   const [activeAgent, setActiveAgent] = useState<AIModel>('codex')
   const [cases, setCases] = useState<Case[]>(DEFAULT_CASES)
@@ -73,6 +83,27 @@ export default function BenchmarkPage() {
   const [isRunning, setIsRunning] = useState(false)
   const [benchmarkResult, setBenchmarkResult] =
     useState<BenchmarkResult | null>(null)
+
+  // Chat에서 넘어온 requirement 자동 실행
+  useEffect(() => {
+    const requirement = searchParams.get('requirement')
+    if (requirement && !isRunning && !benchmarkResult) {
+      setActiveRequirement(requirement)
+      setIsRunning(true)
+      setBenchmarkResult(null)
+      const id = `run_${Date.now()}`
+      setRunId(id)
+      setActiveTab('04-code')
+      fetch('/api/benchmark', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requirement, caseId: 'chat' }),
+      })
+        .then((res) => res.json() as Promise<BenchmarkResult>)
+        .then((result) => setBenchmarkResult(result))
+        .finally(() => setIsRunning(false))
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="min-h-screen bg-white">
