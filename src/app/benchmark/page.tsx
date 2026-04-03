@@ -32,33 +32,10 @@ const DEFAULT_CASES: Case[] = [
   {
     id: '01',
     number: '01',
-    title: 'DIO이츠 고객용',
-    description: '음식 주문, 배달 추적, 다파 사용자가 주문 가능한 고객 앱',
-    prompt: '"DIO이츠 고객 앱 만들어줘"',
-    sourceType: 'text',
-  },
-  {
-    id: '02',
-    number: '02',
-    title: 'DIO이츠 기사용',
-    description: '배달 수락, 경로 안내, 현장 확인이 가능한 기사용 앱',
-    prompt: '"DIO이츠 배달 기사용 앱 만들어줘"',
-    sourceType: 'text',
-  },
-  {
-    id: '03',
-    number: '03',
-    title: 'DIO이츠 음식점용',
-    description: '주문 접수, 메뉴 관리, 대응 줄이기 가능한 음식점용 앱',
-    prompt: '"DIO이츠 음식점 사용앱을 만들어줘"',
-    sourceType: 'text',
-  },
-  {
-    id: '04',
-    number: '04',
-    title: 'DIO이츠 백오피스 어드민',
-    description: '사용자 관리, 주문 모니터링, 정산 처리 가능한 어드민',
-    prompt: '"DIO이츠 음식 어드민 대시보드를 만들어줘"',
+    title: 'AI 영어 학습 서비스',
+    description:
+      '대화 중 모르는 단어를 물어보면 뜻, 어원, 예문을 제공하고 학습 데이터를 분석하는 AI SaaS',
+    prompt: '"AI로 영어 학습을 도와주는 서비스를 만들어줘"',
     sourceType: 'text',
   },
 ]
