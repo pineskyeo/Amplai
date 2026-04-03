@@ -1,6 +1,7 @@
-// Server-side conversation store
-// Keeps conversation history in memory (Supabase로 교체 예정)
-// Solves: page navigation losing messages, JSON parsing issues
+// Conversation store — Supabase persistent + in-memory fallback
+// Stores conversation messages for restoration across page navigation
+
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 interface StoredMessage {
   role: 'user' | 'assistant'
@@ -15,7 +16,17 @@ interface Conversation {
   updatedAt: number
 }
 
+// In-memory cache
 const conversations = new Map<string, Conversation>()
+
+function getSupabase(): SupabaseClient | null {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!url || !key) return null
+  return createClient(url, key)
+}
 
 export function getOrCreateConversation(conversationId?: string): Conversation {
   if (conversationId && conversations.has(conversationId)) {
@@ -32,6 +43,13 @@ export function getOrCreateConversation(conversationId?: string): Conversation {
     updatedAt: Date.now(),
   }
   conversations.set(id, conversation)
+
+  // Create in Supabase (fire-and-forget)
+  const supabase = getSupabase()
+  if (supabase) {
+    void supabase.from('conversations').upsert({ id }).then()
+  }
+
   return conversation
 }
 
@@ -40,11 +58,22 @@ export function addMessage(
   role: 'user' | 'assistant',
   content: string
 ): void {
-  const conv = conversations.get(conversationId)
-  if (!conv) return
-
+  // In-memory
+  let conv = conversations.get(conversationId)
+  if (!conv) {
+    conv = getOrCreateConversation(conversationId)
+  }
   conv.messages.push({ role, content, timestamp: Date.now() })
   conv.updatedAt = Date.now()
+
+  // Supabase (fire-and-forget)
+  const supabase = getSupabase()
+  if (supabase) {
+    void supabase
+      .from('conversation_messages')
+      .insert({ conversation_id: conversationId, role, content })
+      .then()
+  }
 }
 
 export function getMessages(conversationId: string): StoredMessage[] {
@@ -58,6 +87,34 @@ export function getMessagesForApi(
     role: m.role,
     content: m.content,
   }))
+}
+
+// Restore from Supabase (called when in-memory is empty)
+export async function restoreFromSupabase(
+  conversationId: string
+): Promise<StoredMessage[]> {
+  const supabase = getSupabase()
+  if (!supabase) return []
+
+  const { data, error } = await supabase
+    .from('conversation_messages')
+    .select('role, content, created_at')
+    .eq('conversation_id', conversationId)
+    .order('created_at', { ascending: true })
+
+  if (error || !data) return []
+
+  const messages: StoredMessage[] = data.map((row) => ({
+    role: row.role as 'user' | 'assistant',
+    content: row.content,
+    timestamp: new Date(row.created_at).getTime(),
+  }))
+
+  // Cache in memory
+  const conv = getOrCreateConversation(conversationId)
+  conv.messages = messages
+
+  return messages
 }
 
 export function deleteConversation(conversationId: string): void {

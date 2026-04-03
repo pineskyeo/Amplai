@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import PwaRegister from './pwa-register'
+import BenchmarkIndicator from '@/components/ui/benchmark-indicator'
 
 export const metadata: Metadata = {
   title: 'Amplai — Harness Engineering',
@@ -34,6 +35,7 @@ export default function RootLayout({
       <body>
         <PwaRegister />
         {children}
+        <BenchmarkIndicator />
       </body>
     </html>
   )

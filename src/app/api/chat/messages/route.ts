@@ -1,4 +1,4 @@
-import { getMessages } from '@/lib/conversation-store'
+import { getMessages, restoreFromSupabase } from '@/lib/conversation-store'
 
 export async function GET(req: Request) {
   const url = new URL(req.url)
@@ -8,7 +8,13 @@ export async function GET(req: Request) {
     return Response.json({ messages: [] })
   }
 
-  const messages = getMessages(conversationId)
+  // Try in-memory first
+  let messages = getMessages(conversationId)
+
+  // If empty, try Supabase
+  if (messages.length === 0) {
+    messages = await restoreFromSupabase(conversationId)
+  }
 
   return Response.json({
     messages: messages.map((m, i) => ({
