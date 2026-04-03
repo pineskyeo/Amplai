@@ -131,7 +131,6 @@ export default function ChatPage() {
               <path d="M1 1h6v6H1zM9 1h6v6H9zM1 9h6v6H1zM9 9h6v6H9z" />
             </svg>
             <span className="hidden md:inline">Dashboard</span>
-            Dashboard
           </Link>
         </div>
       </div>
