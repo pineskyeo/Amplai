@@ -91,7 +91,42 @@ export async function GET() {
     }
   })
 
-  // --- Input tokens growth per turn ---
+  // --- Unique sessions with labels ---
+  const sessionMap: Record<
+    string,
+    { firstAt: string; model: string; count: number }
+  > = {}
+  for (const r of rows) {
+    const sid = r.session_id as string | null
+    if (!sid) continue
+    if (!sessionMap[sid]) {
+      sessionMap[sid] = { firstAt: r.created_at, model: r.model, count: 0 }
+    }
+    sessionMap[sid].count += 1
+  }
+  const sessionIds = Object.entries(sessionMap).map(([id, info]) => ({
+    id,
+    label: `${new Date(info.firstAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })} · ${info.model} (${info.count}턴)`,
+  }))
+
+  // --- Input tokens growth per turn (grouped by session) ---
+  const sessionGroups: Record<
+    string,
+    Array<{ turn: number; input: number; output: number; total: number }>
+  > = {}
+  for (const r of rows) {
+    const sid = (r.session_id as string) ?? 'unknown'
+    if (!sessionGroups[sid]) sessionGroups[sid] = []
+    const arr = sessionGroups[sid]
+    arr.push({
+      turn: arr.length + 1,
+      input: r.input_tokens,
+      output: r.output_tokens,
+      total: r.input_tokens + r.output_tokens,
+    })
+  }
+
+  // legacy flat list (all sessions)
   const tokenGrowth = rows.map((r, i) => ({
     turn: i + 1,
     input: r.input_tokens,
@@ -135,9 +170,12 @@ export async function GET() {
     scenarioName: r.scenario_name,
     modelId: r.model_id,
     optimizationLevel: r.optimization_level,
+    inputTokens: r.total_input_tokens as number,
+    outputTokens: r.total_output_tokens as number,
     totalTokens: r.total_tokens,
     costUsd: r.total_cost_usd,
     avgLatencyMs: r.avg_latency_ms,
+    turnsJson: r.turns_json,
     createdAt: r.created_at,
   }))
 
@@ -159,6 +197,8 @@ export async function GET() {
     timeline,
     cumulativeCost,
     tokenGrowth,
+    sessionIds,
+    tokenGrowthBySession: sessionGroups,
     optimizationLevels: Object.entries(levelMap).map(([level, data]) => ({
       level: Number(level),
       ...data,

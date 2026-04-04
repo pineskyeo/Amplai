@@ -20,6 +20,33 @@ import {
   Cell,
 } from 'recharts'
 
+interface TokenGrowthItem {
+  turn: number
+  input: number
+  output: number
+  total: number
+}
+
+interface BenchmarkResult {
+  scenarioId: string
+  scenarioName: string
+  modelId: string
+  optimizationLevel: number
+  inputTokens: number
+  outputTokens: number
+  totalTokens: number
+  costUsd: number
+  avgLatencyMs: number
+  turnsJson: Array<{
+    turn: number
+    inputTokens: number
+    outputTokens: number
+    costUsd: number
+    latencyMs: number
+  }>
+  createdAt: string
+}
+
 interface DashboardData {
   summary: {
     totalRequests: number
@@ -45,12 +72,9 @@ interface DashboardData {
     count: number
   }>
   cumulativeCost: Array<{ time: string; cost: number }>
-  tokenGrowth: Array<{
-    turn: number
-    input: number
-    output: number
-    total: number
-  }>
+  tokenGrowth: TokenGrowthItem[]
+  sessionIds: Array<{ id: string; label: string }>
+  tokenGrowthBySession: Record<string, TokenGrowthItem[]>
   optimizationLevels: Array<{
     level: number
     input: number
@@ -59,16 +83,7 @@ interface DashboardData {
     count: number
     avgLatency: number
   }>
-  benchmarkResults: Array<{
-    scenarioId: string
-    scenarioName: string
-    modelId: string
-    optimizationLevel: number
-    totalTokens: number
-    costUsd: number
-    avgLatencyMs: number
-    createdAt: string
-  }>
+  benchmarkResults: BenchmarkResult[]
 }
 
 const PIE_COLORS = [
@@ -96,9 +111,22 @@ function StatCard({ label, value, sub }: StatCardProps) {
   )
 }
 
+const BENCH_COLORS = [
+  '#111827',
+  '#6b7280',
+  '#3b82f6',
+  '#22c55e',
+  '#f59e0b',
+  '#ef4444',
+]
+
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [selectedSession, setSelectedSession] = useState<string>('all')
+  const [benchMetric, setBenchMetric] = useState<'tokens' | 'cost' | 'latency'>(
+    'tokens'
+  )
 
   const fetchData = useCallback(async () => {
     try {
@@ -196,13 +224,35 @@ export default function DashboardPage() {
 
         {/* Charts Grid */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          {/* Token Growth per Turn */}
+          {/* Token Growth per Turn (with session filter) */}
           <div className="rounded-lg border border-gray-200 p-5">
-            <h3 className="mb-4 text-sm font-semibold text-gray-700">
-              턴별 토큰 증가 추이
-            </h3>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-gray-700">
+                턴별 토큰 증가 추이
+              </h3>
+              {data.sessionIds.length > 0 && (
+                <select
+                  value={selectedSession}
+                  onChange={(e) => setSelectedSession(e.target.value)}
+                  className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-600"
+                >
+                  <option value="all">전체 세션</option>
+                  {data.sessionIds.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
             <ResponsiveContainer width="100%" height={240}>
-              <AreaChart data={data.tokenGrowth}>
+              <AreaChart
+                data={
+                  selectedSession === 'all'
+                    ? data.tokenGrowth
+                    : (data.tokenGrowthBySession[selectedSession] ?? [])
+                }
+              >
                 <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                 <XAxis dataKey="turn" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
@@ -370,57 +420,241 @@ export default function DashboardPage() {
             </ResponsiveContainer>
           </div>
         )}
-        {/* Benchmark Results History */}
+        {/* Benchmark Scenario Comparison Chart */}
         {data.benchmarkResults.length > 0 && (
-          <div className="mt-6 rounded-lg border border-gray-200 p-5">
-            <h3 className="mb-4 text-sm font-semibold text-gray-700">
-              벤치마크 결과 이력 ({data.benchmarkResults.length}건)
-            </h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="border-b border-gray-200 text-left text-gray-500">
-                    <th className="py-2 pr-3">시나리오</th>
-                    <th className="py-2 pr-3">모델</th>
-                    <th className="py-2 pr-3">Level</th>
-                    <th className="py-2 pr-3 text-right">Tokens</th>
-                    <th className="py-2 pr-3 text-right">Cost</th>
-                    <th className="py-2 pr-3 text-right">Latency</th>
-                    <th className="py-2 text-right">일시</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.benchmarkResults.map((r, i) => (
-                    <tr
-                      key={i}
-                      className="border-b border-gray-50 text-gray-700"
+          <>
+            <div className="mt-6 rounded-lg border border-gray-200 p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-gray-700">
+                  시나리오별 벤치마크 비교
+                </h3>
+                <div className="flex gap-1">
+                  {(
+                    [
+                      { key: 'tokens', label: 'Tokens' },
+                      { key: 'cost', label: 'Cost' },
+                      { key: 'latency', label: 'Latency' },
+                    ] as const
+                  ).map((m) => (
+                    <button
+                      key={m.key}
+                      onClick={() => setBenchMetric(m.key)}
+                      className={`rounded px-2.5 py-1 text-xs transition-colors ${
+                        benchMetric === m.key
+                          ? 'bg-gray-900 text-white'
+                          : 'border border-gray-200 text-gray-500 hover:border-gray-400'
+                      }`}
                     >
-                      <td className="py-2 pr-3">{r.scenarioName}</td>
-                      <td className="py-2 pr-3">{r.modelId}</td>
-                      <td className="py-2 pr-3">L{r.optimizationLevel}</td>
-                      <td className="py-2 pr-3 text-right font-mono">
-                        {r.totalTokens.toLocaleString()}
-                      </td>
-                      <td className="py-2 pr-3 text-right font-mono">
-                        ${r.costUsd.toFixed(4)}
-                      </td>
-                      <td className="py-2 pr-3 text-right font-mono">
-                        {r.avgLatencyMs}ms
-                      </td>
-                      <td className="py-2 text-right text-gray-400">
-                        {new Date(r.createdAt).toLocaleDateString('ko-KR', {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </td>
-                    </tr>
+                      {m.label}
+                    </button>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              </div>
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart
+                  data={(() => {
+                    const scenarios = [
+                      ...new Set(
+                        data.benchmarkResults.map((r) => r.scenarioId)
+                      ),
+                    ]
+                    const models = [
+                      ...new Set(data.benchmarkResults.map((r) => r.modelId)),
+                    ]
+                    return scenarios.map((sid) => {
+                      const row: Record<string, string | number> = {
+                        scenario:
+                          data.benchmarkResults.find(
+                            (r) => r.scenarioId === sid
+                          )?.scenarioName ?? sid,
+                      }
+                      for (const mid of models) {
+                        const match = data.benchmarkResults.find(
+                          (r) => r.scenarioId === sid && r.modelId === mid
+                        )
+                        if (match) {
+                          if (benchMetric === 'tokens')
+                            row[mid] = match.totalTokens
+                          else if (benchMetric === 'cost')
+                            row[mid] = Number(match.costUsd.toFixed(4))
+                          else row[mid] = match.avgLatencyMs
+                        }
+                      }
+                      return row
+                    })
+                  })()}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                  <XAxis
+                    dataKey="scenario"
+                    tick={{ fontSize: 10 }}
+                    interval={0}
+                    angle={-15}
+                    textAnchor="end"
+                    height={50}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11 }}
+                    tickFormatter={(v: number) =>
+                      benchMetric === 'cost'
+                        ? `$${v.toFixed(3)}`
+                        : benchMetric === 'latency'
+                          ? `${v}ms`
+                          : v.toLocaleString()
+                    }
+                  />
+                  <Tooltip
+                    formatter={(value) => {
+                      const v = Number(value)
+                      return benchMetric === 'cost'
+                        ? `$${v.toFixed(4)}`
+                        : benchMetric === 'latency'
+                          ? `${v}ms`
+                          : v.toLocaleString()
+                    }}
+                  />
+                  <Legend />
+                  {[
+                    ...new Set(data.benchmarkResults.map((r) => r.modelId)),
+                  ].map((mid, i) => (
+                    <Bar
+                      key={mid}
+                      dataKey={mid}
+                      fill={BENCH_COLORS[i % BENCH_COLORS.length]}
+                      name={mid}
+                      radius={[2, 2, 0, 0]}
+                    />
+                  ))}
+                </BarChart>
+              </ResponsiveContainer>
             </div>
-          </div>
+
+            {/* Benchmark Turn-by-Turn Detail Chart */}
+            {data.benchmarkResults.some((r) => r.turnsJson?.length > 0) && (
+              <div className="mt-6 rounded-lg border border-gray-200 p-5">
+                <h3 className="mb-4 text-sm font-semibold text-gray-700">
+                  시나리오별 턴별 토큰 추이
+                </h3>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {[
+                    ...new Set(data.benchmarkResults.map((r) => r.scenarioId)),
+                  ].map((sid) => {
+                    const scenarioResults = data.benchmarkResults.filter(
+                      (r) => r.scenarioId === sid && r.turnsJson?.length > 0
+                    )
+                    if (scenarioResults.length === 0) return null
+                    const scenarioName = scenarioResults[0].scenarioName
+                    const maxTurns = Math.max(
+                      ...scenarioResults.map((r) => r.turnsJson.length)
+                    )
+                    const chartData = Array.from(
+                      { length: maxTurns },
+                      (_, i) => {
+                        const point: Record<string, string | number> = {
+                          turn: `T${i + 1}`,
+                        }
+                        for (const r of scenarioResults) {
+                          const t = r.turnsJson[i]
+                          if (t) {
+                            point[r.modelId] = t.inputTokens + t.outputTokens
+                          }
+                        }
+                        return point
+                      }
+                    )
+                    return (
+                      <div key={sid}>
+                        <p className="mb-2 text-xs font-medium text-gray-500">
+                          {scenarioName}
+                        </p>
+                        <ResponsiveContainer width="100%" height={160}>
+                          <LineChart data={chartData}>
+                            <CartesianGrid
+                              strokeDasharray="3 3"
+                              stroke="#f3f4f6"
+                            />
+                            <XAxis dataKey="turn" tick={{ fontSize: 10 }} />
+                            <YAxis tick={{ fontSize: 10 }} />
+                            <Tooltip />
+                            {scenarioResults.map((r, i) => (
+                              <Line
+                                key={r.modelId}
+                                type="monotone"
+                                dataKey={r.modelId}
+                                stroke={BENCH_COLORS[i % BENCH_COLORS.length]}
+                                strokeWidth={2}
+                                dot={{ r: 2 }}
+                                name={r.modelId}
+                              />
+                            ))}
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Benchmark Results History Table */}
+            <div className="mt-6 rounded-lg border border-gray-200 p-5">
+              <h3 className="mb-4 text-sm font-semibold text-gray-700">
+                벤치마크 결과 이력 ({data.benchmarkResults.length}건)
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-gray-200 text-left text-gray-500">
+                      <th className="py-2 pr-3">시나리오</th>
+                      <th className="py-2 pr-3">모델</th>
+                      <th className="py-2 pr-3">Level</th>
+                      <th className="py-2 pr-3 text-right">Input</th>
+                      <th className="py-2 pr-3 text-right">Output</th>
+                      <th className="py-2 pr-3 text-right">Total</th>
+                      <th className="py-2 pr-3 text-right">Cost</th>
+                      <th className="py-2 pr-3 text-right">Latency</th>
+                      <th className="py-2 text-right">일시</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.benchmarkResults.map((r, i) => (
+                      <tr
+                        key={i}
+                        className="border-b border-gray-50 text-gray-700"
+                      >
+                        <td className="py-2 pr-3">{r.scenarioName}</td>
+                        <td className="py-2 pr-3">{r.modelId}</td>
+                        <td className="py-2 pr-3">L{r.optimizationLevel}</td>
+                        <td className="py-2 pr-3 text-right font-mono">
+                          {r.inputTokens.toLocaleString()}
+                        </td>
+                        <td className="py-2 pr-3 text-right font-mono">
+                          {r.outputTokens.toLocaleString()}
+                        </td>
+                        <td className="py-2 pr-3 text-right font-mono">
+                          {r.totalTokens.toLocaleString()}
+                        </td>
+                        <td className="py-2 pr-3 text-right font-mono">
+                          ${r.costUsd.toFixed(4)}
+                        </td>
+                        <td className="py-2 pr-3 text-right font-mono">
+                          {r.avgLatencyMs}ms
+                        </td>
+                        <td className="py-2 text-right text-gray-400">
+                          {new Date(r.createdAt).toLocaleDateString('ko-KR', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
         )}
       </div>
     </div>
